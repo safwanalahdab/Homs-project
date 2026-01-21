@@ -1,10 +1,12 @@
 from django.contrib.auth import get_user_model
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework import status, permissions
+from rest_framework import status, permissions , viewsets
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import TokenError
-
+from rest_framework.generics import RetrieveUpdateAPIView 
+from .Permission import CanManageAccounts
+from .utils import * 
 from .serializers import * 
 from .helper import *
 
@@ -128,5 +130,76 @@ class ChangePasswordView(APIView) :
                 pass
 
         response = Response({"message": "تم تغيير كلمة المرور بنجاح"}, status=status.HTTP_200_OK)
-        clear_refresh_cookie(response)  # يخليه يسجّل دخول من جديد
+        clear_refresh_cookie(response)  
         return response
+
+class ProfileView ( RetrieveUpdateAPIView ) :
+    serializer_class = ProfileSerializer 
+    permission_classes = [permissions.IsAuthenticated] 
+
+    def get_object(self): 
+        return self.request.user
+    
+class AccountManagementViewSet(viewsets.ModelViewSet):
+    """
+    إدارة الحسابات:
+    - الأمن الأساسي: يشوف الكل، ينشئ مدير منطقة + مدخل بيانات، يعدّل الكل، يوقف/يفعّل الكل
+    - مدير المنطقة: يشوف المستخدمين ضمن منطقته (غالباً مدخل بيانات)، ينشئ مدخل بيانات فقط، يعدّلهم، يوقف/يفعّلهم
+    - مدخل بيانات: لا يدخل أصلاً (ممنوع بالـ permission)
+    """
+
+    queryset = User.objects.all()
+    permission_classes = [ permissions.IsAuthenticated, CanManageAccounts]
+
+    def get_queryset(self):
+        user = self.request.user
+
+        if is_super_admin(user):
+            # يشوف كل المستخدمين
+            return User.objects.all()
+
+        if is_area_manager(user):
+            # يرى فقط مستخدمين من نفس منطقته
+            return User.objects.filter(
+                governorate=user.governorate,
+                area=user.area
+            )
+
+        # مدخل بيانات أصلاً permission ما راح يسمح له يوصل لهون
+        return User.objects.none()
+
+    def get_serializer_class(self):
+        if self.action == "create":
+            return AdminUserCreateSerializer
+        if self.action in ["update", "partial_update"]:
+            return AdminUserUpdateSerializer
+        return AdminUserListSerializer
+
+    def destroy(self, request, *args, **kwargs):
+        """
+        لا نحذف المستخدم فعليًا، نعمل له deactive فقط.
+        """
+        instance = self.get_object()
+
+        # تحقق بسيط زيادة: ما تخليه يوقف super_admin آخر إلا لو super_admin نفسه
+        if not is_super_admin(request.user):
+            from .utils import get_role_name
+
+            if get_role_name(instance) == "super_admin":
+                return Response(
+                    {"error": "لا يمكنك تعطيل حساب الأمن الأساسي"},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+
+        if hasattr(instance, "status"):
+            instance.status = "deactive"
+            instance.save(update_fields=["status"])
+            return Response(
+                {"message": "تم تعطيل الحساب (بدلاً من حذفه)"},
+                status=status.HTTP_200_OK,
+            )
+
+        return Response(
+            {"error": "لا يوجد حقل status لتعطيل الحساب"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
