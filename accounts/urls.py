@@ -1,9 +1,11 @@
 from django.urls import path , include
-from .views import LoginView, RefreshView, LogoutView, MeView , ChangePasswordView , ProfileView , AccountManagementViewSet
+from .views import LoginView, RefreshView, LogoutView, MeView , ChangePasswordView , ProfileView , AccountManagementViewSet , IndustrialFacilityViewSet
 from rest_framework.routers import DefaultRouter
 
 router = DefaultRouter()
 router.register("accounts", AccountManagementViewSet, basename="accounts-management")
+router.register("industrial-facilities", IndustrialFacilityViewSet, basename="industrialfacility")
+
 
 urlpatterns = [
     path("login/", LoginView.as_view(), name="login"),

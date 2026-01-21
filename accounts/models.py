@@ -429,47 +429,47 @@ class NaturalAsset(models.Model):
 
 
 #مناطق صناعية
-class IndustrialFacility(models.Model):
-    class FacilityType(models.TextChoices):
-        WORKSHOP = "workshop", "Workshop"
-        SMALL_FACTORY = "small_factory", "Small factory"
-        MEDIUM_FACTORY = "medium_factory", "Medium factory"
-        LARGE_FACTORY = "large_factory", "Large factory"
-        PROCESSING_PLANT = "processing_plant", "Processing plant"
-        OTHER = "other", "Other"
+    class IndustrialFacility(models.Model):
+        class FacilityType(models.TextChoices):
+            WORKSHOP = "workshop", "Workshop"
+            SMALL_FACTORY = "small_factory", "Small factory"
+            MEDIUM_FACTORY = "medium_factory", "Medium factory"
+            LARGE_FACTORY = "large_factory", "Large factory"
+            PROCESSING_PLANT = "processing_plant", "Processing plant"
+            OTHER = "other", "Other"
 
-    class Classification(models.TextChoices):
-        LOCAL = "Local", "Local"
-        NATIONAL = "National", "National"
-        INTERNATIONAL = "International", "International"
+        class Classification(models.TextChoices):
+            LOCAL = "Local", "Local"
+            NATIONAL = "National", "National"
+            INTERNATIONAL = "International", "International"
 
-    class LicenseType(models.TextChoices):
-        INDUSTRIAL = "industrial", "Industrial"
-        ENVIRONMENTAL = "environmental", "Environmental"
-        COMMERCIAL = "commercial", "Commercial"
-        SAFETY = "safety", "Safety"
-        OTHER = "other", "Other"
+        class LicenseType(models.TextChoices):
+            INDUSTRIAL = "industrial", "Industrial"
+            ENVIRONMENTAL = "environmental", "Environmental"
+            COMMERCIAL = "commercial", "Commercial"
+            SAFETY = "safety", "Safety"
+            OTHER = "other", "Other"
 
-    village = models.ForeignKey(Village, on_delete=models.CASCADE, related_name="industrial_facilities")
-    year = models.PositiveSmallIntegerField()
+        village = models.ForeignKey(Village, on_delete=models.CASCADE, related_name="industrial_facilities")
+        year = models.PositiveSmallIntegerField()
 
-    name = models.CharField(max_length=255)
-    type = models.CharField(max_length=32, choices=FacilityType.choices)
+        name = models.CharField(max_length=255)
+        type = models.CharField(max_length=32, choices=FacilityType.choices)
 
-    person = models.ForeignKey(Person, on_delete=models.PROTECT, related_name="industrial_facilities", blank=True, null=True)
-    classification = models.CharField(max_length=32, choices=Classification.choices, blank=True, null=True)
+        person = models.ForeignKey(Person, on_delete=models.PROTECT, related_name="industrial_facilities", blank=True, null=True)
+        classification = models.CharField(max_length=32, choices=Classification.choices, blank=True, null=True)
 
-    number_of_workers = models.IntegerField(blank=True, null=True)
-    has_license = models.BooleanField(default=False)
-    license_type = models.CharField(max_length=32, choices=LicenseType.choices, blank=True, null=True)
+        number_of_workers = models.IntegerField(blank=True, null=True)
+        has_license = models.BooleanField(default=False)
+        license_type = models.CharField(max_length=32, choices=LicenseType.choices, blank=True, null=True)
 
-    created_by = models.ForeignKey(User, on_delete=models.PROTECT, related_name="created_industrial_facilities")
-    created_at = models.DateTimeField(default=timezone.now)
-    updated_at = models.DateTimeField(auto_now=True)
-    class Meta:
-        constraints = [
-            models.UniqueConstraint(fields=["village", "year", "name"], name="uniq_ind_facility_village_year_name")
-        ]
+        created_by = models.ForeignKey(User, on_delete=models.PROTECT, related_name="created_industrial_facilities")
+        created_at = models.DateTimeField(default=timezone.now)
+        updated_at = models.DateTimeField(auto_now=True)
+        class Meta:
+            constraints = [
+                models.UniqueConstraint(fields=["village", "year", "name"], name="uniq_ind_facility_village_year_name")
+            ]
 
 class IndustrialZone(models.Model):
     village = models.ForeignKey(Village, on_delete=models.CASCADE, related_name="industrial_zones")

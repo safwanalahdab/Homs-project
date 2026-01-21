@@ -4,6 +4,7 @@ from django.db.models import Q
 from rest_framework import serializers
 from .models import *
 from .utils import is_super_admin, is_area_manager
+from .models import IndustrialFacility
 
 User = get_user_model()
 
@@ -312,4 +313,8 @@ class AdminUserUpdateSerializer(serializers.ModelSerializer):
 
         return attrs  
          
+class IndustrialFacilitySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = IndustrialFacility
+        fields = "__all__"
 

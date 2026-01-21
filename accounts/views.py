@@ -203,3 +203,20 @@ class AccountManagementViewSet(viewsets.ModelViewSet):
             {"error": "لا يوجد حقل status لتعطيل الحساب"},
             status=status.HTTP_400_BAD_REQUEST,
         )
+
+class IndustrialFacilityViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet لإدارة المنشآت الصناعية:
+    - إضافة (POST)
+    - عرض الكل أو واحد (GET)
+    - تعديل كامل (PUT)
+    - تعديل جزئي (PATCH)
+    - حذف (DELETE)
+    """
+    queryset = IndustrialFacility.objects.all()
+    serializer_class = IndustrialFacilitySerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def perform_create(self, serializer):
+        # عند الإضافة، اربط المنشأة بالمستخدم الحالي
+        serializer.save(created_by=self.request.user)
