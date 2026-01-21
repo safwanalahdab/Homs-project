@@ -3,9 +3,7 @@ from django.contrib.auth.password_validation import validate_password
 from django.db.models import Q
 from rest_framework import serializers
 from .models import *
-from .utils import is_super_admin, is_area_manager
-from .models import IndustrialFacility
-
+from .utils import is_super_admin, is_area_manager 
 User = get_user_model()
 
 class LoginSerizlizer( serializers.Serializer ) : 
@@ -318,3 +316,45 @@ class IndustrialFacilitySerializer(serializers.ModelSerializer):
         model = IndustrialFacility
         fields = "__all__"
 
+class LivestockSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Livestock
+        fields = '__all__'
+class GovernmentDepartmentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = GovernmentDepartment
+        fields = '__all__'
+
+class NaturalAssetSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = NaturalAsset
+        fields = '__all__'
+
+class IndustrialZoneSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = IndustrialZone
+        fields = '__all__'
+
+
+class ArchaeologicalSiteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ArchaeologicalSite
+        fields = '__all__'
+
+
+class TourismFacilitySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TourismFacility
+        fields = '__all__'
+
+
+class CommercialActivitySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CommercialActivity
+        fields = '__all__'
+
+
+class DemographicDataSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DemographicData
+        fields = '__all__'

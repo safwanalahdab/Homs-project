@@ -429,7 +429,7 @@ class NaturalAsset(models.Model):
 
 
 #مناطق صناعية
-    class IndustrialFacility(models.Model):
+class IndustrialFacility(models.Model):
         class FacilityType(models.TextChoices):
             WORKSHOP = "workshop", "Workshop"
             SMALL_FACTORY = "small_factory", "Small factory"

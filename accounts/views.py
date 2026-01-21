@@ -220,3 +220,63 @@ class IndustrialFacilityViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         # عند الإضافة، اربط المنشأة بالمستخدم الحالي
         serializer.save(created_by=self.request.user)
+
+class LivestockViewSet(viewsets.ModelViewSet):
+    queryset = Livestock.objects.all()
+    serializer_class = LivestockSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def perform_create(self, serializer):
+        serializer.save(created_by=self.request.user)
+class GovernmentDepartmentViewSet(viewsets.ModelViewSet):
+    queryset = GovernmentDepartment.objects.all()
+    serializer_class = GovernmentDepartmentSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+class NaturalAssetViewSet(viewsets.ModelViewSet):
+    queryset = NaturalAsset.objects.all()
+    serializer_class = NaturalAssetSerializer
+    permission_classes = [permissions.IsAuthenticated]
+class IndustrialZoneViewSet(viewsets.ModelViewSet):
+    queryset = IndustrialZone.objects.all()
+    serializer_class = IndustrialZoneSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def perform_create(self, serializer):
+        serializer.save(created_by=self.request.user)
+
+
+class ArchaeologicalSiteViewSet(viewsets.ModelViewSet):
+    queryset = ArchaeologicalSite.objects.all()
+    serializer_class = ArchaeologicalSiteSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def perform_create(self, serializer):
+        serializer.save(created_by=self.request.user)
+
+
+class TourismFacilityViewSet(viewsets.ModelViewSet):
+    queryset = TourismFacility.objects.all()
+    serializer_class = TourismFacilitySerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def perform_create(self, serializer):
+        serializer.save(created_by=self.request.user)
+
+
+class CommercialActivityViewSet(viewsets.ModelViewSet):
+    queryset = CommercialActivity.objects.all()
+    serializer_class = CommercialActivitySerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def perform_create(self, serializer):
+        serializer.save(created_by=self.request.user)
+
+
+class DemographicDataViewSet(viewsets.ModelViewSet):
+    queryset = DemographicData.objects.all()
+    serializer_class = DemographicDataSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def perform_create(self, serializer):
+        serializer.save(created_by=self.request.user)
