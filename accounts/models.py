@@ -178,7 +178,7 @@ class VillageSectKeyFigure(models.Model):
 class VillageEthnicity(models.Model):
     village = models.ForeignKey(Village, on_delete=models.CASCADE, related_name="village_ethnicities")
     ethnicity = models.ForeignKey(Ethnicity, on_delete=models.PROTECT, related_name="village_ethnicities")
-    year = models.PositiveSmallIntegerField()
+    year = models.PositiveSmallIntegerField( null = True )
 
     family_count = models.IntegerField(blank=True, null=True)
     individual_count = models.IntegerField(blank=True, null=True)
@@ -208,7 +208,7 @@ class EthnicityKeyFigure(models.Model):
 class VillageTribe(models.Model):
     village = models.ForeignKey(Village, on_delete=models.CASCADE, related_name="village_tribes")
     tribe = models.ForeignKey(Tribe, on_delete=models.PROTECT, related_name="village_tribes")
-    year = models.PositiveSmallIntegerField()
+   # year = models.PositiveSmallIntegerField()
 
     individual_count = models.IntegerField(blank=True, null=True)
 
@@ -217,7 +217,7 @@ class VillageTribe(models.Model):
 
     class Meta:
         constraints = [
-            models.UniqueConstraint(fields=["village", "tribe", "year"], name="uniq_village_tribe_year")
+            models.UniqueConstraint(fields=["village", "tribe"], name="uniq_village_tribe_year")
         ]
 
 # الاشخاص المهمين حسب القبيلة
@@ -481,13 +481,14 @@ class IndustrialZone(models.Model):
     annual_revenue = models.IntegerField(blank=True, null=True)
 
     created_by = models.ForeignKey(User, on_delete=models.PROTECT, related_name="created_industrial_zones")
-    created_at = models.IntegerField()  # TODO: غالباً timestamp
-    updated_at = models.IntegerField()  # TODO: غالباً timestamp
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         constraints = [
             models.UniqueConstraint(fields=["village", "year"], name="uniq_industrial_zone_village_year")
         ]
+
 
 
 #منشات أثرية
@@ -510,7 +511,7 @@ class ArchaeologicalSite(models.Model):
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(auto_now=True)
 
-class TourismFacility(models.Model):
+class TourismFacility(models.Model) :
     class FacilityType(models.TextChoices):
         HOTEL = "HOTEL", "Hotel"
         RESORT = "RESORT", "Resort"
@@ -580,7 +581,7 @@ class CommercialActivity(models.Model):
     activity_type = models.CharField(max_length=32, choices=ActivityType.choices)
     address = models.CharField(max_length=500, blank=True, null=True)
 
-    person = models.ForeignKey(Person, on_delete=models.PROTECT, related_name="commercial_activities", blank=True, null=True)
+    person = models.CharField(max_length=30 , null = True , blank=True)
 
     is_licensed = models.BooleanField(default=False)
     license_type = models.CharField(max_length=32, choices=LicenseType.choices, blank=True, null=True)
@@ -690,3 +691,4 @@ class AgriculturalCrop(models.Model):
         constraints = [
             models.UniqueConstraint(fields=["agricultural_status", "crop"], name="uniq_ag_status_crop")
         ]
+

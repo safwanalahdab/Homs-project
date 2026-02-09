@@ -1,5 +1,3 @@
-
-
 def get_role_name(user) -> str:
     role = getattr(user, "role", None)
     if not role:
