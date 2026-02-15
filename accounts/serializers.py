@@ -1,13 +1,24 @@
 from django.contrib.auth import authenticate, get_user_model
 from django.contrib.auth.password_validation import validate_password
+
 from django.db.models import Q
 from rest_framework import serializers
+
 from .models import *
-from .utils import is_super_admin, is_area_manager
+from .utils import *
 
 User = get_user_model()
 
 class LoginSerizlizer( serializers.Serializer ) : 
+    """
+    Login serializer:
+    - Accepts a single identifier (username or email) + password.
+    - Validates that both fields are provided.
+    - Finds the user by username/email (case-insensitive).
+    - Authenticates using Django's authenticate().
+    - Blocks login if the account status is deactive.
+    - Returns the authenticated user in validated_data["user"].
+    """
     identifier = serializers.CharField() 
     password = serializers.CharField( write_only = True ) 
 
@@ -20,7 +31,7 @@ class LoginSerizlizer( serializers.Serializer ) :
 
        user = User.objects.filter(
            Q( username__iexact = identifier) | Q( email__iexact = identifier )
-       ).first()
+        ).first()
 
        if not user : 
            raise serializers.ValidationError({"error" : "الايميل او المستخدم غير موجود" })
@@ -38,6 +49,14 @@ class LoginSerizlizer( serializers.Serializer ) :
 
 
 class ChangePasswordSerializer( serializers.Serializer ) : 
+    """
+    Change Password serializer:
+    - Requires old_password, new_password, and confirm_password.
+    - Uses request.user from serializer context to verify old_password.
+    - Ensures new_password matches confirm_password.
+    - Validates password strength using Django's validate_password().
+    - Returns validated data for use in ChangePasswordView.
+    """
     old_password = serializers.CharField( write_only = True ) 
     new_password = serializers.CharField( write_only = True ) 
     confirm_password = serializers.CharField( write_only = True ) 
@@ -61,6 +80,12 @@ class ChangePasswordSerializer( serializers.Serializer ) :
     
 
 class ProfileSerializer(serializers.ModelSerializer):
+    """
+    Profile serializer:
+    - Exposes user profile fields for viewing and updating.
+    - Allows editing only basic personal info (first_name, last_name, phone, gender, birth_date).
+    - Keeps account identity, role/status, location assignments, and timestamps read-only.
+    """
     class Meta:
         model = User
         fields = [
@@ -95,33 +120,40 @@ class ProfileSerializer(serializers.ModelSerializer):
 
 
 class AdminUserListSerializer(serializers.ModelSerializer):
-    role_name = serializers.CharField(source="role.name", read_only=True)
-    role = serializers.SlugRelatedField(
-        slug_field="name",
-        queryset=Role.objects.all(),
-    )
-    governorate = serializers.SlugRelatedField(
-        slug_field="name",
-        queryset=Governorate.objects.all(),
-    )
-    area = serializers.SlugRelatedField(
-        slug_field="name",
-        queryset=Area.objects.all(),
-    )
-    class Meta:
+
+   role = serializers.PrimaryKeyRelatedField(queryset=Role.objects.all())
+   role_name = serializers.CharField(source="role.name", read_only=True)
+
+   governorate = serializers.PrimaryKeyRelatedField(queryset=Governorate.objects.all(), required=False, allow_null=True)
+   governorate_name = serializers.CharField(source="governorate.name", read_only=True)
+
+   area = serializers.PrimaryKeyRelatedField(queryset=Area.objects.all(), required=False, allow_null=True)
+   area_name = serializers.CharField(source="area.name", read_only=True)
+
+   class Meta:
         model = User
         fields = [
             "id",
             "email",
             "username",
-            "first_name" ,
-            "last_name" ,
+            "first_name",
+            "last_name",
             "phone",
             "status",
+
+            # FK ids
             "role",
             "role_name",
             "governorate",
+            "governorate_name" ,
             "area",
+            "area_name" ,
+
+            # display names
+            "role_name",
+            "governorate_name",
+            "area_name",
+
             "created_at",
             "updated_at",
         ]
@@ -129,18 +161,15 @@ class AdminUserListSerializer(serializers.ModelSerializer):
 class AdminUserCreateSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=True)
     confirm_password = serializers.CharField(write_only=True, required=True)
-    role = serializers.SlugRelatedField(
-        slug_field="name",
-        queryset=Role.objects.all(),
-    )
-    governorate = serializers.SlugRelatedField(
-        slug_field="name",
-        queryset=Governorate.objects.all(),
-    )
-    area = serializers.SlugRelatedField(
-        slug_field="name",
-        queryset=Area.objects.all(),
-    )
+    role = serializers.PrimaryKeyRelatedField(queryset=Role.objects.all())
+    role_name = serializers.CharField(source="role.name", read_only=True)
+
+    governorate = serializers.PrimaryKeyRelatedField(queryset=Governorate.objects.all(), required=False, allow_null=True)
+    governorate_name = serializers.CharField(source="governorate.name", read_only=True)
+
+    area = serializers.PrimaryKeyRelatedField(queryset=Area.objects.all(), required=False, allow_null=True)
+    area_name = serializers.CharField(source="area.name", read_only=True)
+    
     class Meta:
         model = User
         fields = [
@@ -152,9 +181,12 @@ class AdminUserCreateSerializer(serializers.ModelSerializer):
             "gender",
             "birth_date",
             "role",
+            "role_name" ,
             "status",
             "governorate",
+            "governorate_name" ,
             "area",
+            "area_name" ,
             "password",
             "confirm_password",
         ]
@@ -311,5 +343,54 @@ class AdminUserUpdateSerializer(serializers.ModelSerializer):
                 )
 
         return attrs  
-         
+    
+class AdminSetPasswordSerializer(serializers.Serializer):
+    new_password = serializers.CharField(write_only=True, required=True)
+    confirm_password = serializers.CharField(write_only=True, required=True)
+
+    def validate(self, attrs):
+        request = self.context["request"]
+        actor = request.user                       # اللي عم يغير
+        target_user: User = self.context["target_user"]  # اللي رح تتغير كلمته
+
+        pw = attrs.get("new_password")
+        cpw = attrs.get("confirm_password")
+
+        if pw != cpw:
+            raise serializers.ValidationError({"confirm_password": "كلمتا المرور غير متطابقتين"})
+
+        # تحقق قوة كلمة السر حسب إعدادات Django validators
+        validate_password(pw, user=target_user)
+
+        # قواعد الأمان على حسب الدور
+        if is_super_admin(actor):
+            # (اختياري) منع سوبر أدمن يغير كلمة سوبر أدمن ثاني
+            # إذا بدك تسمح احذف هالبلوك
+            if get_role_name(target_user) == "super_admin" and actor.id != target_user.id:
+                raise serializers.ValidationError({"permission": "لا يمكنك تغيير كلمة سر أمن أساسي آخر."})
+            return attrs
+
+        if is_area_manager(actor):
+            # لا يسمح لمدير المنطقة بتغيير كلمة سر super_admin
+            if get_role_name(target_user) == "super_admin":
+                raise serializers.ValidationError({"permission": "لا يمكنك تغيير كلمة سر الأمن الأساسي."})
+
+            # لازم يكون ضمن نفس المنطقة (حسب منطقك الحالي: governorate + area)
+            if (
+                target_user.governorate != actor.governorate
+                or target_user.area != actor.area
+            ):
+                raise serializers.ValidationError({"location": "لا يمكنك تغيير كلمة سر مستخدم خارج منطقتك."})
+
+            return attrs
+
+        raise serializers.ValidationError({"permission": "ليس لديك صلاحية لتغيير كلمات المرور."})
+
+    def save(self):
+        target_user: User = self.context["target_user"]
+        pw = self.validated_data["new_password"]
+        target_user.set_password(pw)
+        target_user.save(update_fields=["password"])
+        return target_user
+    
 

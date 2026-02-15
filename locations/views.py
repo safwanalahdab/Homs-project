@@ -1,5 +1,8 @@
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from rest_framework import status
 
 from accounts.models import Governorate, Area, SubArea, Village
 from accounts.utils import is_super_admin, is_area_manager, is_data_entry
@@ -7,11 +10,13 @@ from .serializers import *
 from .mixins import * 
 from .permissions import IsSuperAdmin, IsLocationStaff
 
+from rest_framework.views import APIView
+from rest_framework.permissions import AllowAny
 
 class GovernorateViewSet(viewsets.ModelViewSet):
     """
-    إدارة المحافظات:
-    - الأمن الأساسي فقط
+     إدارة المحافظات:
+    - الأدمن الأساسي فقط
     """
     serializer_class = GovernorateSerializer
     permission_classes = [IsAuthenticated, IsSuperAdmin]
@@ -23,7 +28,7 @@ class GovernorateViewSet(viewsets.ModelViewSet):
 class AreaViewSet(viewsets.ModelViewSet):
     """
     إدارة المناطق:
-    - الأمن الأساسي فقط
+    - الأدمن الأساسي فقط
     - فلترة:
         ?governorate=<اسم المحافظة>
         ?name=<اسم المنطقة>
@@ -52,6 +57,13 @@ class SubAreaViewSet(viewsets.ModelViewSet):
     - الأمن الأساسي: يشوف/يضيف/يعدّل/يحذف الكل
     - مدير المنطقة + مدخل البيانات:
         يشوف/يضيف/يعدّل/يحذف فقط النواحي ضمن منطقته (user.area)
+    
+    Filters (optional):
+    - ?area=<id>               (Area ID)
+    - ?area_name=<name>        (Area name)
+    - ?governorate=<id>        (Governorate ID)
+    - ?governorate_name=<name> (Governorate name)
+    - ?name=<subarea_name>     (SubArea name)
     """
     serializer_class = SubAreaSerializer
     permission_classes = [IsAuthenticated, IsLocationStaff]
@@ -71,15 +83,43 @@ class SubAreaViewSet(viewsets.ModelViewSet):
         else:
             return SubArea.objects.none()
 
-        # فلاتر اختيارية بالأسماء
-        area_name = params.get("area")
-        gov_name = params.get("governorate")
+        # -----------------------
+        # Filters
+        # -----------------------
+
+        # Area: ID or Name
+        area_id = params.get("area")          # ID
+        area_name = params.get("area_name")   # Name
+
+        # Governorate: ID or Name (optional but useful)
+        gov_id = params.get("governorate")            # ID
+        gov_name = params.get("governorate_name")     # Name
+
+        # SubArea name
         subarea_name = params.get("name")
+
+        # Apply area filter
+        if area_id:
+            if area_id.isdigit():
+                qs = qs.filter(area_id=int(area_id))
+            else:
+                # لو حدا بعت اسم بالغلط ضمن ?area=الرستن (توافق للخلف)
+                qs = qs.filter(area__name__iexact=area_id)
 
         if area_name:
             qs = qs.filter(area__name__iexact=area_name)
+
+        # Apply governorate filter
+        if gov_id:
+            if gov_id.isdigit():
+                qs = qs.filter(area__governorate_id=int(gov_id))
+            else:
+                qs = qs.filter(area__governorate__name__iexact=gov_id)
+
         if gov_name:
             qs = qs.filter(area__governorate__name__iexact=gov_name)
+
+        # Apply subarea filter
         if subarea_name:
             qs = qs.filter(name__iexact=subarea_name)
 
@@ -91,8 +131,18 @@ class VillageViewSet(viewsets.ModelViewSet):
     إدارة القرى:
     - الأمن الأساسي: يشوف/يضيف/يعدّل/يحذف كل القرى
     - مدير المنطقة + مدخل البيانات:
-        يشوف/يضيف/يعدّل/يحذف فقط القرى ضمن منطقته (subarea.area = user.area)
+        يشوف/يضيف/يعدّل/يحذف فقط القرى ضمن منطقته
+
+    Filters (optional):
+    - ?subarea=<id>                 (SubArea ID)
+    - ?subarea_name=<name>          (SubArea name)
+    - ?area=<id>                    (Area ID)
+    - ?area_name=<name>             (Area name)
+    - ?governorate=<id>             (Governorate ID)
+    - ?governorate_name=<name>      (Governorate name)
+    - ?name=<village_name>          (Village name)
     """
+
     serializer_class = VillageSerializer
     permission_classes = [IsAuthenticated, IsLocationStaff]
 
@@ -114,22 +164,100 @@ class VillageViewSet(viewsets.ModelViewSet):
         else:
             return Village.objects.none()
 
-        # فلاتر اختيارية بالأسماء
-        subarea_name = params.get("subarea")
-        area_name = params.get("area")
-        gov_name = params.get("governorate")
+        # -----------------------
+        # Filters (ID + Name)
+        # -----------------------
+
+        # SubArea
+        subarea_id = params.get("subarea")            # ID
+        subarea_name = params.get("subarea_name")     # Name
+
+        # Area
+        area_id = params.get("area")                  # ID
+        area_name = params.get("area_name")           # Name
+
+        # Governorate
+        gov_id = params.get("governorate")            # ID
+        gov_name = params.get("governorate_name")     # Name
+
+        # Village name
         village_name = params.get("name")
+
+        # Apply SubArea filter
+        if subarea_id:
+            if subarea_id.isdigit():
+                qs = qs.filter(subarea_id=int(subarea_id))
+            else:
+                # backward compatibility: ?subarea=الرستن
+                qs = qs.filter(subarea__name__iexact=subarea_id)
 
         if subarea_name:
             qs = qs.filter(subarea__name__iexact=subarea_name)
+
+        # Apply Area filter
+        if area_id:
+            if area_id.isdigit():
+                qs = qs.filter(subarea__area_id=int(area_id))
+            else:
+                # backward compatibility: ?area=الرستن
+                qs = qs.filter(subarea__area__name__iexact=area_id)
+
         if area_name:
             qs = qs.filter(subarea__area__name__iexact=area_name)
+
+        # Apply Governorate filter
+        if gov_id:
+            if gov_id.isdigit():
+                qs = qs.filter(subarea__area__governorate_id=int(gov_id))
+            else:
+                # backward compatibility: ?governorate=حمص
+                qs = qs.filter(subarea__area__governorate__name__iexact=gov_id)
+
         if gov_name:
             qs = qs.filter(subarea__area__governorate__name__iexact=gov_name)
+
+        # Apply Village name filter
         if village_name:
             qs = qs.filter(name__iexact=village_name)
 
         return qs
+
+    @action(detail=True, methods=["get"], url_path="full")
+    def full(self, request, pk=None):
+        """
+        يعرض كل البيانات المرتبطة بالقرية
+        """
+        village = self.get_object()
+
+        data = {
+            "village": VillageSerializer(village).data,
+            "people": PersonSerializer(Person.objects.filter(village=village), many=True).data,
+            "livestock_records": LivestockSerializer(Livestock.objects.filter(village=village), many=True).data,
+            "industrial_facilities": IndustrialFacilitySerializer(
+                IndustrialFacility.objects.filter(village=village), many=True
+            ).data,
+            "government_departments": GovernmentDepartmentSerializer(
+                GovernmentDepartment.objects.filter(village=village), many=True
+            ).data,
+            "natural_assets": NaturalAssetSerializer(NaturalAsset.objects.filter(village=village), many=True).data,
+            "industrial_zones": IndustrialZoneSerializer(IndustrialZone.objects.filter(village=village), many=True).data,
+            "archaeological_sites": ArchaeologicalSiteSerializer(
+                ArchaeologicalSite.objects.filter(village=village), many=True
+            ).data,
+            "tourism_facilities": TourismFacilitySerializer(
+                TourismFacility.objects.filter(village=village), many=True
+            ).data,
+            "commercial_activities": CommercialActivitySerializer(
+                CommercialActivity.objects.filter(village=village), many=True
+            ).data,
+            "demographic_data": DemographicDataSerializer(
+                DemographicData.objects.filter(village=village), many=True
+            ).data,
+        }
+
+        return Response(data)
+
+    
 
 class PersonViewSet(LocationScopedQuerysetMixin, viewsets.ModelViewSet):
     """
@@ -699,3 +827,87 @@ class DemographicDataViewSet(viewsets.ModelViewSet):
             )
 
         return qs.none()
+
+class AgriculturalStatusViewSet(viewsets.ModelViewSet):
+    """
+    إدارة الحالة الزراعية في القرى.
+    """
+
+    queryset = AgriculturalStatus.objects.select_related(
+        "village",
+        "village__subarea",
+        "village__subarea__area",
+        "village__subarea__area__governorate",
+        "created_by",
+    ).all().order_by("-year", "village__name")
+
+    serializer_class = AgriculturalStatusSerializer
+    permission_classes = [IsAuthenticated, IsLocationStaff]
+
+    def get_queryset(self):
+        user = self.request.user
+        qs = super().get_queryset()
+
+        if not user or not user.is_authenticated:
+            return qs.none()
+
+        if is_super_admin(user):
+            return qs
+
+        if is_area_manager(user) or is_data_entry(user):
+            return qs.filter(
+                village__subarea__area=user.area,
+                village__subarea__area__governorate=user.governorate,
+            )
+
+        return qs.none()
+
+
+class AgriculturalCropViewSet(viewsets.ModelViewSet):
+    """
+    إدارة محاصيل الحالة الزراعية.
+    """
+
+    queryset = AgriculturalCrop.objects.select_related(
+        "agricultural_status",
+        "agricultural_status__village",
+        "agricultural_status__village__subarea",
+        "agricultural_status__village__subarea__area",
+        "agricultural_status__village__subarea__area__governorate",
+        "created_by",
+    ).all().order_by("-agricultural_status__year", "crop_name")
+
+    serializer_class = AgriculturalCropSerializer
+    permission_classes = [IsAuthenticated, IsLocationStaff]
+
+    def get_queryset(self):
+        user = self.request.user
+        qs = super().get_queryset()
+
+        if not user or not user.is_authenticated:
+            return qs.none()
+
+        if is_super_admin(user):
+            pass
+        elif is_area_manager(user) or is_data_entry(user):
+            qs = qs.filter(
+                agricultural_status__village__subarea__area=user.area,
+                agricultural_status__village__subarea__area__governorate=user.governorate,
+            )
+        else:
+            return qs.none()
+
+        # فلاتر اختيارية للفرونت
+        ag_status_id = self.request.query_params.get("agricultural_status")
+        if ag_status_id:
+            qs = qs.filter(agricultural_status_id=ag_status_id)
+
+        village_id = self.request.query_params.get("village")
+        if village_id:
+            qs = qs.filter(agricultural_status__village_id=village_id)
+
+        year = self.request.query_params.get("year")
+        if year:
+            qs = qs.filter(agricultural_status__year=year)
+
+        return qs

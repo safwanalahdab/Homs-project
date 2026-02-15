@@ -9,7 +9,7 @@ https://docs.djangoproject.com/en/6.0/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
-
+"""
 from pathlib import Path 
 import os 
 import dj_database_url
@@ -51,6 +51,8 @@ INSTALLED_APPS = [
 
     'accounts',
     'locations',
+    'drf_yasg',
+
 
 
 ]
@@ -111,12 +113,13 @@ WSGI_APPLICATION = 'src.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
-"""DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
-}
+"""
+#DATABASES = {
+ #   'default': {
+  #      'ENGINE': 'django.db.backends.sqlite3',
+   #     'NAME': BASE_DIR / 'db.sqlite3',
+    #}
+#}
 """
 
 DATABASES = {
@@ -162,3 +165,168 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+"""
+
+from pathlib import Path 
+import os 
+import dj_database_url
+from decouple import config 
+from datetime import timedelta
+from corsheaders.defaults import default_headers
+
+
+# Build paths inside the project like this: BASE_DIR / 'subdir'.
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+
+# Quick-start development settings - unsuitable for production
+# See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
+
+# SECURITY WARNING: keep the secret key used in production secret!
+SECRET_KEY = 'django-insecure-^1%_u!f(ngtr^+e5q4t*)*nte9+xwre1l&@jykmmt_pp((&0&+'
+
+# SECURITY WARNING: don't run with debug turned on in production!
+DEBUG = True
+
+ALLOWED_HOSTS = [
+    "127.0.0.1",
+    "localhost",
+    "unlubricant-nonqualitative-colton.ngrok-free.dev",  # Allow ngrok domain
+]
+
+# Application definition
+
+INSTALLED_APPS = [
+    'django.contrib.admin',
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    'django.contrib.staticfiles',
+    'rest_framework',
+    "rest_framework_simplejwt.token_blacklist",
+    'corsheaders',  # CORS headers support
+    'accounts',
+    'locations',
+    'drf_yasg',  # Swagger for API documentation
+]
+
+MIDDLEWARE = [
+    'django.middleware.security.SecurityMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
+     "corsheaders.middleware.CorsMiddleware",
+    'django.middleware.common.CommonMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django.contrib.messages.middleware.MessageMiddleware',
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    "corsheaders.middleware.CorsMiddleware",  # Adding CORS middleware
+]
+
+# CORS configuration to allow frontend requests
+CORS_ALLOWED_ORIGINS = [
+    "http://127.0.0.1:3000",  # Frontend on localhost (for development)
+    "https://*.ngrok-free.dev",
+    "http://localhost:3000",
+  # Allow ngrok subdomains for dynamic URLs
+]
+
+CORS_ALLOW_CREDENTIALS = True  # Allow cookies to be sent with requests (important for JWT)
+CORS_ALLOW_ALL_ORIGINS = True
+
+#CORS_ALLOW_HEADERS = list(default_headers) + [
+#    "Authorization",  # Allow Authorization header for Bearer tokens
+#]
+
+CORS_ALLOW_HEADERS = list(default_headers) + [
+    "ngrok-skip-browser-warning",
+]
+
+# JWT settings
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": (
+        "rest_framework_simplejwt.authentication.JWTAuthentication",  # JWT auth class
+    ),
+    "DEFAULT_PERMISSION_CLASSES": (
+        "rest_framework.permissions.IsAuthenticated",  # Permission class for authenticated access
+    ),
+}
+
+
+# JWT Token settings
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=1000),  # Access token expiry time
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=14),  # Refresh token expiry time
+    "ROTATE_REFRESH_TOKENS": True,  # Rotate refresh tokens when a new access token is generated
+    "BLACKLIST_AFTER_ROTATION": True,  # Blacklist old refresh token after rotating
+    "LEEWAY": 0,  # No leeway for token expiry
+}
+
+ROOT_URLCONF = 'src.urls'
+
+TEMPLATES = [
+    {
+        'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        'DIRS': [],
+        'APP_DIRS': True,
+        'OPTIONS': {
+            'context_processors': [
+                'django.template.context_processors.request',
+                'django.contrib.auth.context_processors.auth',
+                'django.contrib.messages.context_processors.messages',
+            ],
+        },
+    },
+]
+
+WSGI_APPLICATION = 'src.wsgi.application'
+APPEND_SLASH = False
+
+
+# Database
+# https://docs.djangoproject.com/en/6.0/ref/settings/#databases
+
+DATABASES = {
+    "default": dj_database_url.config(
+        default=config("DATABASE_URL"),
+        conn_max_age=600,
+    )
+}
+AUTH_USER_MODEL = "accounts.User"
+
+# Password validation
+# https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
+
+AUTH_PASSWORD_VALIDATORS = [
+    {
+        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+    },
+]
+
+
+# Internationalization
+# https://docs.djangoproject.com/en/6.0/topics/i18n/
+
+LANGUAGE_CODE = 'en-us'
+
+TIME_ZONE = 'UTC'
+
+USE_I18N = True
+
+USE_TZ = True
+
+
+# Static files (CSS, JavaScript, Images)
+# https://docs.djangoproject.com/en/6.0/howto/static-files/
+
+STATIC_URL = 'static/'
+

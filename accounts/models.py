@@ -37,17 +37,20 @@ class Village ( models.Model ) :
     subarea = models.ForeignKey( SubArea , on_delete = models.PROTECT , related_name = "villages" ) 
     type = models.CharField( max_length = 100 , choices = VillageType.choices ) 
     parent_name = models.CharField( max_length = 100 , null = True , blank = True ) 
+    code = models.CharField( max_length = 100 , null = True , blank = True ) 
 
     def __str__(self):
         return self.name 
     
 
+#الدور
 class Role ( models.Model ) : 
     name = models.CharField( max_length = 100 , unique = True ) 
 
     def __str__(self):
         return self.name 
 
+#الدور وعلى ايا وحدة
 class Permission( models.Model ) : 
     action = models.CharField( max_length = 100 ) 
     entity = models.CharField( max_length = 100 ) 
@@ -62,6 +65,7 @@ class Permission( models.Model ) :
     def __str__(self):
         return f"{self.action}:{self.entity}" 
 
+#ربط
 class PermissionRole ( models.Model ) : 
     role = models.ForeignKey( Role , on_delete = models.PROTECT , related_name = "permission_links" ) 
     permission = models.ForeignKey( Permission , on_delete = models.PROTECT , related_name = "role_links" )
@@ -72,6 +76,7 @@ class PermissionRole ( models.Model ) :
         ]
     """
 
+#جدول المستخدمين 
 class User ( AbstractUser ) : 
     class Gender( models.TextChoices ) : 
         MALE = "male", "Male"
@@ -116,7 +121,8 @@ class Tribe(models.Model):
 
     def __str__(self):
         return self.name
-    
+
+#جدول الاشخاص المهمين ضمن المكان    
 class Person(models.Model):
     name = models.CharField(max_length=255)
 
@@ -143,6 +149,7 @@ class Person(models.Model):
 
     def __str__(self):
         return self.name
+
     
 class VillageSect(models.Model):
     village = models.ForeignKey(Village, on_delete=models.CASCADE, related_name="village_sects")
@@ -678,7 +685,7 @@ class AgriculturalCrop(models.Model):
     agricultural_status = models.ForeignKey(
         AgriculturalStatus, on_delete=models.CASCADE, related_name="agricultural_crops"
     )
-    crop = models.ForeignKey(Crop, on_delete=models.PROTECT, related_name="agricultural_crops")
+    crop_name = models.CharField(max_length=255, blank=True, null=True)
 
     area = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
     is_strategic = models.BooleanField(default=False)
@@ -689,6 +696,6 @@ class AgriculturalCrop(models.Model):
 
     class Meta:
         constraints = [
-            models.UniqueConstraint(fields=["agricultural_status", "crop"], name="uniq_ag_status_crop")
+            models.UniqueConstraint(fields=["agricultural_status", "crop_name"], name="uniq_ag_status_crop")
         ]
 

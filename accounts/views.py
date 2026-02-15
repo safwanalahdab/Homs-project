@@ -6,6 +6,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework.generics import RetrieveUpdateAPIView 
 from .Permission import CanManageAccounts
+from rest_framework.decorators import action
 from .utils import * 
 from .serializers import * 
 from .helper import *
@@ -26,9 +27,15 @@ def user_payload(user) :
     }
 
 class LoginView( APIView ) :
-   permission_classes = [ permissions.AllowAny ]
+    """
+    Login endpoint:
+    - Validates credentials via LoginSerializer.
+    - Returns access token in JSON.
+    - Stores refresh token in HttpOnly cookie (scoped to /api/auth/).
+    """
+    permission_classes = [ permissions.AllowAny ]
 
-   def post( self , request ) : 
+    def post( self , request ) : 
        serializer = LoginSerizlizer( data = request.data ) 
        serializer.is_valid( raise_exception = True )
        user = serializer.validated_data["user"]
@@ -48,7 +55,15 @@ class LoginView( APIView ) :
        return response
    
 
-class RefreshView( APIView ) : 
+class RefreshView( APIView ) :
+    """
+    Refresh endpoint:
+    - Reads refresh token from HttpOnly cookie (refresh_token).
+    - Validates the refresh token and identifies the user.
+    - Rotates tokens: blacklists old refresh (if enabled) and issues a new refresh token.
+    - Returns a new access token in JSON.
+    - Stores the new refresh token back in the HttpOnly cookie (scoped to /api/auth/).
+    """ 
     permission_classes = [permissions.AllowAny] 
 
     def post( self , request ) :
@@ -86,7 +101,15 @@ class RefreshView( APIView ) :
         set_refresh_cookie(response, str(new_refresh))
         return response
 
-class LogoutView(APIView):
+class LogoutView( APIView ) :
+    """
+    Logout endpoint:
+    - Requires a valid access token (IsAuthenticated).
+    - Reads refresh token from HttpOnly cookie (refresh_token).
+    - Blacklists the refresh token if blacklisting is enabled.
+    - Clears the refresh token cookie from the client.
+    - Returns a success message in JSON.
+    """
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
@@ -102,7 +125,13 @@ class LogoutView(APIView):
         clear_refresh_cookie(response)
         return response
     
-class MeView(APIView):
+class MeView( APIView ) :
+    """
+    Me endpoint:
+    - Requires a valid access token (IsAuthenticated).
+    - Returns the authenticated user's data (user_payload) as JSON.
+    """
+
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
@@ -110,6 +139,14 @@ class MeView(APIView):
 
 
 class ChangePasswordView(APIView) :
+    """
+    Change Password endpoint:
+    - Requires a valid access token (IsAuthenticated).
+    - Validates password change input via ChangePasswordSerializer (using request in context).
+    - Updates the authenticated user's password using set_password (hashed).
+    - Security: blacklists the current refresh token (if enabled) and clears the refresh cookie.
+    - Returns a success message in JSON.
+    """
     permission_classes = [permissions.IsAuthenticated] 
 
     def post( self , request ) : 
@@ -203,3 +240,23 @@ class AccountManagementViewSet(viewsets.ModelViewSet):
             {"error": "لا يوجد حقل status لتعطيل الحساب"},
             status=status.HTTP_400_BAD_REQUEST,
         )
+    
+    @action(detail=True, methods=["post"], url_path="set-password")
+    def set_password(self, request, pk=None):
+        target_user = self.get_object()
+
+        serializer = AdminSetPasswordSerializer(
+            data=request.data,
+            context={
+                "request": request,
+                "target_user": target_user,
+            },
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        return Response(
+            {"message": "تم تغيير كلمة المرور بنجاح"},
+            status=status.HTTP_200_OK,
+        )
+    
