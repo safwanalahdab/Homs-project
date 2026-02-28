@@ -250,8 +250,18 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": (
         "rest_framework.permissions.IsAuthenticated",  # Permission class for authenticated access
     ),
+    "DEFAULT_THROTTLE_RATES": {
+        "login_ip": "20/min",
+        "login_identifier": "8/min",
+    }
 }
 
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "throttle-cache",
+    }
+}
 
 # JWT Token settings
 SIMPLE_JWT = {

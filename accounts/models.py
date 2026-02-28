@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser 
 from django.utils import timezone 
 
+
 # المدينة مثل حمص
 class Governorate( models.Model ) : 
     name = models.CharField( max_length = 100 ) 
@@ -61,7 +62,6 @@ class Permission( models.Model ) :
             models.UniqueConstraint( fields = ['action','entity'] , name = "uniq_action_entity" ) 
         ]
     """
-
     def __str__(self):
         return f"{self.action}:{self.entity}" 
 
@@ -150,7 +150,7 @@ class Person(models.Model):
     def __str__(self):
         return self.name
 
-    
+#احصائية الطائفة ضمن قرية معينة     
 class VillageSect(models.Model):
     village = models.ForeignKey(Village, on_delete=models.CASCADE, related_name="village_sects")
     sect = models.ForeignKey(Sect, on_delete=models.PROTECT, related_name="village_sects")
@@ -181,11 +181,11 @@ class VillageSectKeyFigure(models.Model):
             models.UniqueConstraint(fields=["village_sect", "person"], name="uniq_village_sect_person")
         ]
 
+#احصائيات الاعراق ضمن قرية معينة 
 
 class VillageEthnicity(models.Model):
     village = models.ForeignKey(Village, on_delete=models.CASCADE, related_name="village_ethnicities")
     ethnicity = models.ForeignKey(Ethnicity, on_delete=models.PROTECT, related_name="village_ethnicities")
-    year = models.PositiveSmallIntegerField( null = True )
 
     family_count = models.IntegerField(blank=True, null=True)
     individual_count = models.IntegerField(blank=True, null=True)
@@ -195,8 +195,9 @@ class VillageEthnicity(models.Model):
 
     class Meta:
         constraints = [
-            models.UniqueConstraint(fields=["village", "ethnicity", "year"], name="uniq_village_ethnicity_year")
+            models.UniqueConstraint(fields=["village", "ethnicity", ], name="uniq_village_ethnicity")
         ]
+
 #الاشخاص المهمين حسب العرق
 class EthnicityKeyFigure(models.Model):
     village_ethnicity = models.ForeignKey(VillageEthnicity, on_delete=models.CASCADE, related_name="key_figures")
@@ -212,19 +213,20 @@ class EthnicityKeyFigure(models.Model):
         ]
 
 
+# احصائيات القبائل ضمن قرية معينة
+
 class VillageTribe(models.Model):
     village = models.ForeignKey(Village, on_delete=models.CASCADE, related_name="village_tribes")
     tribe = models.ForeignKey(Tribe, on_delete=models.PROTECT, related_name="village_tribes")
-   # year = models.PositiveSmallIntegerField()
 
     individual_count = models.IntegerField(blank=True, null=True)
-
+    family_count = models.IntegerField(blank=True, null=True)
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         constraints = [
-            models.UniqueConstraint(fields=["village", "tribe"], name="uniq_village_tribe_year")
+            models.UniqueConstraint(fields=["village", "tribe"], name="uniq_village_tribe")
         ]
 
 # الاشخاص المهمين حسب القبيلة
@@ -317,10 +319,11 @@ class UserHistory(models.Model):
 
     created_at = models.DateTimeField(default=timezone.now)
 
+
 #بيانات الثروة الحيوانية لقرية ضمن سنة.
+
 class Livestock(models.Model):
     village = models.ForeignKey(Village, on_delete=models.CASCADE, related_name="livestock_records")
-    year = models.PositiveSmallIntegerField()
 
     cows_count = models.IntegerField(blank=True, null=True)
     sheep_count = models.IntegerField(blank=True, null=True)
@@ -328,12 +331,12 @@ class Livestock(models.Model):
     camels_count = models.IntegerField(blank=True, null=True)
     fish_count = models.IntegerField(blank=True, null=True)
 
-    feeds = models.JSONField(blank=True, null=True)
+    feeds = models.TextField(blank=True, null=True)
     grazing_areas = models.IntegerField(blank=True, null=True)
     grazing_areas_size = models.IntegerField(blank=True, null=True)
 
     meat_production = models.IntegerField(blank=True, null=True)
-    milk_products = models.JSONField(blank=True, null=True)
+    milk_products = models.TextField(blank=True, null=True)
     egg_production = models.IntegerField(blank=True, null=True)
 
     breeders_count = models.IntegerField(blank=True, null=True)
@@ -343,19 +346,21 @@ class Livestock(models.Model):
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(auto_now=True)
 
-    class Meta:
-        constraints = [
-            models.UniqueConstraint(fields=["village", "year"], name="uniq_livestock_village_year")
-        ]
+    #class Meta:
+     #   constraints = [
+        #    models.UniqueConstraint(fields=["village", "year"], name="uniq_livestock_village_year")
+      #  ]
+
 
 #أي دائرة حكومية موجودة بأي قرية، بأي سنة، وتحت أي وزارة، مع تفاصيل التواصل والإدارة.
+
 class GovernmentDepartment(models.Model):
     class MinistryName(models.TextChoices):
         ECONIMIC = "econimic", "Econimic"      
         TECHNOLOGY = "technology", "Technology"
 
-    year = models.PositiveSmallIntegerField()
-    ministry_name = models.CharField(max_length=32, choices=MinistryName.choices)
+    #year = models.PositiveSmallIntegerField()
+    ministry_name = models.CharField(max_length=32)
     department_name = models.CharField(max_length=255)
 
     village = models.ForeignKey(Village, on_delete=models.CASCADE, related_name="government_departments")
@@ -369,7 +374,7 @@ class GovernmentDepartment(models.Model):
 
     class Meta:
         constraints = [
-            models.UniqueConstraint(fields=["village", "year", "department_name"], name="uniq_dept_village_year_name")
+            models.UniqueConstraint(fields=["village", "department_name"], name="uniq_dept_village_name")
         ]
 
 """
@@ -390,15 +395,15 @@ class NaturalAsset(models.Model):
         COAST = "coast", "Coast"
         DESERT = "desert", "Desert"
         NATURE_RESERVE = "nature_reserve", "Nature reserve"
-        PETROLEUM_RESOURCE = "Petroleum_Resource", "Petroleum Resource"
+        PETROLEUM_RESOURCE = "petroleum_resource", "Petroleum Resource"
 
     class Classification(models.TextChoices):
-        PROTECTED_AREA = "PROTECTED_AREA", "Protected area"
-        TOURIST_SITE = "TOURIST_SITE", "Tourist site"
-        INVESTMENT_ZONE = "INVESTMENT_ZONE", "Investment zone"
-        PUBLIC_PARK = "PUBLIC_PARK", "Public park"
-        FORESTRY_AREA = "FORESTRY_AREA", "Forestry area"
-        NATURAL_RESOURCE = "NATURAL_RESOURCE", "Natural resource"
+      PROTECTED_AREA  = "protected_area",  "Protected area"
+      TOURIST_SITE    = "tourist_site",    "Tourist site"
+      INVESTMENT_ZONE = "investment_zone", "Investment zone"
+      PUBLIC_PARK     = "public_park",     "Public park"
+      FORESTRY_AREA   = "forestry_area",   "Forestry area"
+      NATURAL_RESOURCE= "natural_resource","Natural resource"
 
     class ImportantLevel(models.TextChoices):
         LOCAL = "local", "Local"
@@ -411,7 +416,6 @@ class NaturalAsset(models.Model):
         MIXED = "mixed", "Mixed"
 
     village = models.ForeignKey(Village, on_delete=models.CASCADE, related_name="natural_assets")
-    year = models.PositiveSmallIntegerField()
 
     type = models.CharField(max_length=64, choices=AssetType.choices)
     name = models.CharField(max_length=255)
@@ -435,7 +439,8 @@ class NaturalAsset(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
 
-#مناطق صناعية
+#المناطق صناعية 
+
 class IndustrialFacility(models.Model):
     class FacilityType(models.TextChoices):
         WORKSHOP = "workshop", "Workshop"
@@ -458,7 +463,6 @@ class IndustrialFacility(models.Model):
         OTHER = "other", "Other"
 
     village = models.ForeignKey(Village, on_delete=models.CASCADE, related_name="industrial_facilities")
-    year = models.PositiveSmallIntegerField()
 
     name = models.CharField(max_length=255)
     type = models.CharField(max_length=32, choices=FacilityType.choices)
@@ -475,12 +479,11 @@ class IndustrialFacility(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     class Meta:
         constraints = [
-            models.UniqueConstraint(fields=["village", "year", "name"], name="uniq_ind_facility_village_year_name")
+            models.UniqueConstraint(fields=["village", "name"], name="uniq_ind_facility_village_name")
         ]
 
 class IndustrialZone(models.Model):
     village = models.ForeignKey(Village, on_delete=models.CASCADE, related_name="industrial_zones")
-    year = models.PositiveSmallIntegerField()
 
     number_of_facilities = models.IntegerField(blank=True, null=True)
     number_of_shops = models.IntegerField(blank=True, null=True)
@@ -493,15 +496,15 @@ class IndustrialZone(models.Model):
 
     class Meta:
         constraints = [
-            models.UniqueConstraint(fields=["village", "year"], name="uniq_industrial_zone_village_year")
+            models.UniqueConstraint(fields=["village"], name="uniq_industrial_zone_village")
         ]
 
 
 
-#منشات أثرية
+# المنشات أثرية
+
 class ArchaeologicalSite(models.Model):
     village = models.ForeignKey(Village, on_delete=models.CASCADE, related_name="archaeological_sites")
-    year = models.PositiveSmallIntegerField()
 
     name = models.CharField(max_length=255)
     site_date = models.CharField(max_length=255, blank=True, null=True)
@@ -518,23 +521,25 @@ class ArchaeologicalSite(models.Model):
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(auto_now=True)
 
+#المنشاّت السياحية
+
 class TourismFacility(models.Model) :
     class FacilityType(models.TextChoices):
-        HOTEL = "HOTEL", "Hotel"
-        RESORT = "RESORT", "Resort"
-        TOURIST_RESTAURANT = "TOURIST_RESTAURANT", "Tourist restaurant"
-        PARK = "PARK", "Park"
-        ARCHAEOLOGICAL_SITE = "ARCHAEOLOGICAL_SITE", "Archaeological site"
-        BEACH = "BEACH", "Beach"
-        MUSEUM = "MUSEUM", "Museum"
+        HOTEL = "hotel", "Hotel"
+        RESORT = "esort", "Resort"
+        TOURIST_RESTAURANT = "tourist_restaurant", "Tourist restaurant"
+        PARK = "park", "Park"
+        ARCHAEOLOGICAL_SITE = "archaeological_site", "Archaeological site"
+        BEACH = "beach", "Beach"
+        MUSEUM = "museum", "Museum"
 
     class Classification(models.TextChoices):
-        LOCAL = "LOCAL", "Local"
-        NATIONAL = "NATIONAL", "National"
-        INTERNATIONAL = "INTERNATIONAL", "International"
+        LOCAL = "local", "Local"
+        NATIONAL = "national", "National"
+        INTERNATIONAL = "international", "International"
 
+    name = models.CharField( null=True , blank= True )
     village = models.ForeignKey(Village, on_delete=models.CASCADE, related_name="tourism_facilities")
-    year = models.PositiveSmallIntegerField()
 
     type = models.CharField(max_length=64, choices=FacilityType.choices)
     is_invested = models.BooleanField(default=False)
@@ -558,7 +563,8 @@ class TourismFacility(models.Model) :
     updated_at = models.DateTimeField(auto_now=True)
 
 
-#نشاطات تجارية
+#
+# نشاطات تجارية
 class CommercialActivity(models.Model):
     class ActivityType(models.TextChoices):
         GROCERY = "grocery", "Grocery"
@@ -582,7 +588,6 @@ class CommercialActivity(models.Model):
         TEMPORARY = "temporary", "Temporary"
 
     village = models.ForeignKey(Village, on_delete=models.CASCADE, related_name="commercial_activities")
-    year = models.PositiveSmallIntegerField()
 
     name = models.CharField(max_length=255)
     activity_type = models.CharField(max_length=32, choices=ActivityType.choices)
@@ -599,10 +604,10 @@ class CommercialActivity(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
 
-#ديموغرايفية
+#ديموغرايفية قرية معينة 
+
 class DemographicData(models.Model):
     village = models.ForeignKey(Village, on_delete=models.CASCADE, related_name="demographic_data")
-    year = models.PositiveSmallIntegerField()
 
     administrative_boundaries = models.CharField(max_length=500, blank=True, null=True)
     area = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
@@ -639,8 +644,10 @@ class DemographicData(models.Model):
 
     class Meta:
         constraints = [
-            models.UniqueConstraint(fields=["village", "year"], name="uniq_demographic_village_year")
+            models.UniqueConstraint(fields=["village"], name="uniq_demographic_village")
         ]
+
+#الحالة الزراعية ضمن قرية معينة 
 
 class AgriculturalStatus(models.Model):
     class Season(models.TextChoices):
@@ -650,7 +657,6 @@ class AgriculturalStatus(models.Model):
         AUTUMN = "autumn", "Autumn"
 
     village = models.ForeignKey(Village, on_delete=models.CASCADE, related_name="agricultural_statuses")
-    year = models.PositiveSmallIntegerField()
 
     total_agricultural_area = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
     irrigated_land_percentage = models.DecimalField(max_digits=5, decimal_places=2, blank=True, null=True)
@@ -658,10 +664,10 @@ class AgriculturalStatus(models.Model):
     critical_land_percentage = models.DecimalField(max_digits=5, decimal_places=2, blank=True, null=True)
     state_owned_land_percentage = models.DecimalField(max_digits=5, decimal_places=2, blank=True, null=True)
 
-    water_resources = models.JSONField(blank=True, null=True)
-    season = models.CharField(
-        max_length=10, choices=Season.choices, blank=True, null=True
-    )  # NULL = annual report
+    water_resources = models.CharField(blank=True, null=True)
+
+    season = models.CharField(max_length=10, choices=Season.choices, blank=True, null=True)
+    crops = models.CharField(blank=True, null=True)  
 
     created_by = models.ForeignKey(User, on_delete=models.PROTECT, related_name="created_agricultural_statuses")
     created_at = models.DateTimeField(default=timezone.now)
@@ -669,33 +675,5 @@ class AgriculturalStatus(models.Model):
 
     class Meta:
         constraints = [
-            models.UniqueConstraint(fields=["village", "year", "season"], name="uniq_agri_status_village_year_season")
+            models.UniqueConstraint(fields=["village", "season"], name="uniq_agri_status_village_season")
         ]
-
-class Crop(models.Model):
-    name = models.CharField(max_length=255, unique=True)
-    created_by = models.ForeignKey(User, on_delete=models.PROTECT, related_name="created_crops")
-    created_at = models.DateTimeField(default=timezone.now)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    def __str__(self):
-        return self.name
-    
-class AgriculturalCrop(models.Model):
-    agricultural_status = models.ForeignKey(
-        AgriculturalStatus, on_delete=models.CASCADE, related_name="agricultural_crops"
-    )
-    crop_name = models.CharField(max_length=255, blank=True, null=True)
-
-    area = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
-    is_strategic = models.BooleanField(default=False)
-
-    created_by = models.ForeignKey(User, on_delete=models.PROTECT, related_name="created_agricultural_crops")
-    created_at = models.DateTimeField(default=timezone.now)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        constraints = [
-            models.UniqueConstraint(fields=["agricultural_status", "crop_name"], name="uniq_ag_status_crop")
-        ]
-

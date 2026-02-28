@@ -5,7 +5,7 @@ from accounts.utils import is_super_admin, is_area_manager, is_data_entry
 
 
 class IsSuperAdmin(BasePermission):
-    message = "هذه العمليات متاحة للأمن الأساسي فقط."
+    message = "هذه العمليات متاحة للأدمن الأساسي فقط."
 
     def has_permission(self, request, view):
         user = request.user

@@ -153,7 +153,8 @@ class AdminUserListSerializer(serializers.ModelSerializer):
             "role_name",
             "governorate_name",
             "area_name",
-
+            
+            "gender" ,
             "created_at",
             "updated_at",
         ]
@@ -161,6 +162,7 @@ class AdminUserListSerializer(serializers.ModelSerializer):
 class AdminUserCreateSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=True)
     confirm_password = serializers.CharField(write_only=True, required=True)
+    
     role = serializers.PrimaryKeyRelatedField(queryset=Role.objects.all())
     role_name = serializers.CharField(source="role.name", read_only=True)
 
@@ -202,8 +204,7 @@ class AdminUserCreateSerializer(serializers.ModelSerializer):
                 {"confirm_password": "كلمتا المرور غير متطابقتين"}
             )
 
-        validate_password(pw)
-
+        validate_password(pw)       
         # منطق الأدوار:
         # - super_admin: يمكنه إنشاء area_manager & data_entry
         # - area_manager: يمكنه إنشاء data_entry فقط وفي نفس منطقته
@@ -213,13 +214,11 @@ class AdminUserCreateSerializer(serializers.ModelSerializer):
         # نفترض role.name موجودة
         target_role_name = (getattr(target_role, "name", "") or "").lower()
 
-        from .utils import is_super_admin, is_area_manager
-
         if is_super_admin(creator):
             # super_admin حر: يسمح له بكل الأدوار اللي انت تعريفها
             if target_role_name not in ("area_manager", "data_entry"):
                 raise serializers.ValidationError(
-                    {"role": "الأمن الأساسي يمكنه إنشاء مدير منطقة أو مدخل بيانات فقط"}
+                    {"role": "الأدمن الأساسي يمكنه إنشاء مدير منطقة أو مدخل بيانات فقط"}
                 )
 
         elif is_area_manager(creator):
@@ -230,11 +229,11 @@ class AdminUserCreateSerializer(serializers.ModelSerializer):
                 )
 
             # ويجب أن تكون نفس المنطقة تبعه
-            if (
+            if(
                 attrs.get("governorate") != creator.governorate
                 or attrs.get("area") != creator.area
 
-            ):
+             ):
                 raise serializers.ValidationError(
                     {"location": "مدير المنطقة يمكنه إنشاء مستخدمين ضمن منطقته فقط"}
                 )
@@ -253,37 +252,31 @@ class AdminUserCreateSerializer(serializers.ModelSerializer):
         creator = request.user
 
         # إن حابب تضيف created_by:
-        # validated_
+        # validated
         user = User(**validated_data)
         user.set_password(password)
         user.save()
         return user
 
 class AdminUserUpdateSerializer(serializers.ModelSerializer):
-    role = serializers.SlugRelatedField(
-        slug_field="name",
+    role = serializers.PrimaryKeyRelatedField(
         queryset=Role.objects.all(),
     )
-    governorate = serializers.SlugRelatedField(
-        slug_field="name",
-        queryset=Governorate.objects.all(),
-    )
-    area = serializers.SlugRelatedField(
-        slug_field="name",
+    area = serializers.PrimaryKeyRelatedField(
         queryset=Area.objects.all(),
     )
+
     class Meta:
         model = User
         fields = [
             "username",
-            "first_name" ,
-            "last_name" ,
+            "first_name",
+            "last_name",
             "phone",
             "gender",
             "birth_date",
             "role",
             "status",
-            "governorate",
             "area",
         ]
 
@@ -293,7 +286,7 @@ class AdminUserUpdateSerializer(serializers.ModelSerializer):
         instance: "User" = self.instance
 
         target_role = attrs.get("role", instance.role)
-        target_role_name = (getattr(target_role, "name", "") or "").lower()
+        target_role_id = target_role.id if target_role else None
 
         # super_admin: حر، بس ممكن تحط قواعد لو حابب (مثلاً ما ينزل مستخدم super_admin آخر إلا بشروط)
         if is_super_admin(editor):
@@ -304,45 +297,42 @@ class AdminUserUpdateSerializer(serializers.ModelSerializer):
         # area_manager:
         if is_area_manager(editor):
             # لا يسمح له بتعديل أدوار الأمن الأساسي أو مدراء مناطق آخرين
-            instance_role_name = (getattr(instance.role, "name", "") or "").lower()
+            instance_role_id = instance.role.id if instance.role else None
 
             # لا يمكنه تعديل super_admin أبداً
-            if instance_role_name == "super_admin":
+            if instance_role_id == 1:  # assuming super_admin has id = 1
                 raise serializers.ValidationError(
                     {"permission": "لا يمكنك تعديل حساب الأمن الأساسي"}
                 )
 
             # لا يمكنه يرفع/يغيّر دور المستخدم إلى مدير منطقة أو سوبر أدمن
-            if target_role_name in ("super_admin", "area_manager"):
+            if target_role_id in [1, 2]:  # assuming super_admin = 1, area_manager = 2
                 raise serializers.ValidationError(
-                    {"role": "لا يمكنك ترقية المستخدم إلى مدير منطقة أو أمن أساسي"}
+                    {"role": "لا يمكنك ترقية المستخدم إلى مدير منطقة أو أدمن أساسي"}
                 )
 
             # يجب أن يكون المستخدم ضمن نفس منطقته
             if (
-                instance.governorate != editor.governorate
-                or instance.area != editor.area
-                or instance.subarea != editor.subarea
+                instance.governorate.id != editor.governorate.id
+                or instance.area.id != editor.area.id
             ):
                 raise serializers.ValidationError(
                     {"location": "لا يمكنك تعديل مستخدمين خارج منطقتك"}
                 )
 
-            # بالنسبة للموقع: لو حاول يغيّر governorate/area/subarea لازم يظلوا ضمن نفسه
+            # بالنسبة للموقع: لو حاول يغيّر governorate/area لازم يظلوا ضمن نفسه
             new_governorate = attrs.get("governorate", instance.governorate)
             new_area = attrs.get("area", instance.area)
-            new_subarea = attrs.get("subarea", instance.subarea)
 
             if (
-                new_governorate != editor.governorate
-                or new_area != editor.area
-                or new_subarea != editor.subarea
+                new_governorate.id != editor.governorate.id
+                or new_area.id != editor.area.id
             ):
                 raise serializers.ValidationError(
                     {"location": "لا يمكنك نقل المستخدم إلى منطقة أخرى غير منطقتك"}
                 )
 
-        return attrs  
+        return attrs 
     
 class AdminSetPasswordSerializer(serializers.Serializer):
     new_password = serializers.CharField(write_only=True, required=True)
@@ -367,13 +357,13 @@ class AdminSetPasswordSerializer(serializers.Serializer):
             # (اختياري) منع سوبر أدمن يغير كلمة سوبر أدمن ثاني
             # إذا بدك تسمح احذف هالبلوك
             if get_role_name(target_user) == "super_admin" and actor.id != target_user.id:
-                raise serializers.ValidationError({"permission": "لا يمكنك تغيير كلمة سر أمن أساسي آخر."})
+                raise serializers.ValidationError({"permission": "لا يمكنك تغيير كلمة سر أدمن أساسي آخر."})
             return attrs
 
         if is_area_manager(actor):
             # لا يسمح لمدير المنطقة بتغيير كلمة سر super_admin
             if get_role_name(target_user) == "super_admin":
-                raise serializers.ValidationError({"permission": "لا يمكنك تغيير كلمة سر الأمن الأساسي."})
+                raise serializers.ValidationError({"permission": "لا يمكنك تغيير كلمة سر الأدمن الأساسي."})
 
             # لازم يكون ضمن نفس المنطقة (حسب منطقك الحالي: governorate + area)
             if (
@@ -393,4 +383,3 @@ class AdminSetPasswordSerializer(serializers.Serializer):
         target_user.save(update_fields=["password"])
         return target_user
     
-

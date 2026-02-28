@@ -3,7 +3,7 @@ from .utils import is_super_admin, is_area_manager
 
 class CanManageAccounts(BasePermission):
    
-   message = "غير مصرح: هذه الواجهة لإدارة الحسابات (الأمن الأساسي ومدراء المناطق فقط)."
+   message = "غير مصرح: هذه الواجهة لإدارة الحسابات (الأدمن الأساسي ومدراء المناطق فقط)."
 
    def has_permission(self, request, view):
      user = request.user

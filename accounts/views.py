@@ -10,6 +10,7 @@ from rest_framework.decorators import action
 from .utils import * 
 from .serializers import * 
 from .helper import *
+from .throttles import LoginIPThrottle, LoginIdentifierThrottle
 
 User = get_user_model() 
 
@@ -22,8 +23,9 @@ def user_payload(user) :
         "scope": {
             "governorate_id": user.governorate_id,
             "area_id": user.area_id,
-            "subarea_id": user.subarea_id,
         }
+        ,
+       "area": getattr(user.area, "name", None)   
     }
 
 class LoginView( APIView ) :
@@ -34,6 +36,7 @@ class LoginView( APIView ) :
     - Stores refresh token in HttpOnly cookie (scoped to /api/auth/).
     """
     permission_classes = [ permissions.AllowAny ]
+    throttle_classes = [LoginIPThrottle, LoginIdentifierThrottle]
 
     def post( self , request ) : 
        serializer = LoginSerizlizer( data = request.data ) 
@@ -168,7 +171,7 @@ class ChangePasswordView(APIView) :
 
         response = Response({"message": "تم تغيير كلمة المرور بنجاح"}, status=status.HTTP_200_OK)
         clear_refresh_cookie(response)  
-        return response
+        return response 
 
 class ProfileView ( RetrieveUpdateAPIView ) :
     serializer_class = ProfileSerializer 
@@ -259,4 +262,4 @@ class AccountManagementViewSet(viewsets.ModelViewSet):
             {"message": "تم تغيير كلمة المرور بنجاح"},
             status=status.HTTP_200_OK,
         )
-    
+

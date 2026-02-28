@@ -13,7 +13,6 @@ router.register("sect", SectViewSet , basename="sectViewSet")
 router.register("ethnicity", EthnicityViewSet , basename="EthnicityViewSet")
 router.register("tribe", TribeViewSet , basename="Tribe")
 router.register("village-sects", VillageSectViewSet, basename="village-sects")
-#router.register("village-sect-key-figures",VillageSectKeyFigureViewSet,basename="village-sect-key-figures") 
 router.register("villageEthnicity",VillageEthnicityViewSet,basename="villageEthnicity")
 router.register("village-tribes", VillageTribeViewSet, basename="village-tribe")
 router.register("industrial-facilities",IndustrialFacilityViewSet,basename="industrial-facility")
@@ -25,9 +24,9 @@ router.register("archaeological-sites",ArchaeologicalSiteViewSet, basename="arch
 router.register("tourism-facilities",TourismFacilityViewSet,basename="tourism-facility")
 router.register("commercial-activities",CommercialActivityViewSet,basename="commercial-activity")
 router.register("demographic-data",DemographicDataViewSet,basename="demographic-data")
-router.register("agricultural-statuses", AgriculturalStatusViewSet, basename="agricultural-status")
-router.register("agricultural-crops", AgriculturalCropViewSet, basename="agricultural-crop")
+router.register("agricultural-statuses", AgriculturalStatusViewSet, basename="agricultural-statuses")
+
 
 urlpatterns = [
-    path('', include( router.urls ) ) 
+    path('', include( router.urls )) 
 ] 

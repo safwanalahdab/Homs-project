@@ -1,5 +1,6 @@
 from django.contrib import admin
 from .models import * 
+
 # Register your models here.
 
 MODELS = [
@@ -16,7 +17,6 @@ MODELS = [
     IndustrialZone, TourismFacility, IndustrialFacility,
     ArchaeologicalSite, CommercialActivity,
     DemographicData, AgriculturalStatus,
-    Crop, AgriculturalCrop,
 ]
 
 admin.site.register(MODELS)

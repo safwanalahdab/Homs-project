@@ -13,6 +13,7 @@ from .permissions import IsSuperAdmin, IsLocationStaff
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny
 
+
 class GovernorateViewSet(viewsets.ModelViewSet):
     """
      إدارة المحافظات:
@@ -54,7 +55,7 @@ class AreaViewSet(viewsets.ModelViewSet):
 class SubAreaViewSet(viewsets.ModelViewSet):
     """
     إدارة النواحي:
-    - الأمن الأساسي: يشوف/يضيف/يعدّل/يحذف الكل
+    - الأدمن الأساسي: يشوف/يضيف/يعدّل/يحذف الكل
     - مدير المنطقة + مدخل البيانات:
         يشوف/يضيف/يعدّل/يحذف فقط النواحي ضمن منطقته (user.area)
     
@@ -224,38 +225,74 @@ class VillageViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=["get"], url_path="full")
     def full(self, request, pk=None):
-        """
-        يعرض كل البيانات المرتبطة بالقرية
-        """
-        village = self.get_object()
+ 
+     village = self.get_object()
 
-        data = {
-            "village": VillageSerializer(village).data,
-            "people": PersonSerializer(Person.objects.filter(village=village), many=True).data,
-            "livestock_records": LivestockSerializer(Livestock.objects.filter(village=village), many=True).data,
-            "industrial_facilities": IndustrialFacilitySerializer(
-                IndustrialFacility.objects.filter(village=village), many=True
-            ).data,
-            "government_departments": GovernmentDepartmentSerializer(
-                GovernmentDepartment.objects.filter(village=village), many=True
-            ).data,
-            "natural_assets": NaturalAssetSerializer(NaturalAsset.objects.filter(village=village), many=True).data,
-            "industrial_zones": IndustrialZoneSerializer(IndustrialZone.objects.filter(village=village), many=True).data,
-            "archaeological_sites": ArchaeologicalSiteSerializer(
-                ArchaeologicalSite.objects.filter(village=village), many=True
-            ).data,
-            "tourism_facilities": TourismFacilitySerializer(
-                TourismFacility.objects.filter(village=village), many=True
-            ).data,
-            "commercial_activities": CommercialActivitySerializer(
-                CommercialActivity.objects.filter(village=village), many=True
-            ).data,
-            "demographic_data": DemographicDataSerializer(
-                DemographicData.objects.filter(village=village), many=True
-            ).data,
-        }
+     data = {
+        "village": VillageSerializer(village).data,
 
-        return Response(data)
+        "people": PersonSerializer(
+            Person.objects.filter(village=village), many=True
+        ).data,
+
+        "livestock_records": LivestockSerializer(
+            Livestock.objects.filter(village=village), many=True
+        ).data,
+
+        "industrial_facilities": IndustrialFacilitySerializer(
+            IndustrialFacility.objects.filter(village=village), many=True
+        ).data,
+
+        "government_departments": GovernmentDepartmentSerializer(
+            GovernmentDepartment.objects.filter(village=village), many=True
+        ).data,
+
+        "natural_assets": NaturalAssetSerializer(
+            NaturalAsset.objects.filter(village=village), many=True
+        ).data,
+
+        "industrial_zones": IndustrialZoneSerializer(
+            IndustrialZone.objects.filter(village=village), many=True
+        ).data,
+
+        "archaeological_sites": ArchaeologicalSiteSerializer(
+            ArchaeologicalSite.objects.filter(village=village), many=True
+        ).data,
+
+        "tourism_facilities": TourismFacilitySerializer(
+            TourismFacility.objects.filter(village=village), many=True
+        ).data,
+
+        "commercial_activities": CommercialActivitySerializer(
+            CommercialActivity.objects.filter(village=village), many=True
+        ).data,
+
+        "demographic_data": DemographicDataSerializer(
+            DemographicData.objects.filter(village=village), many=True
+        ).data,
+
+        # -----------------------
+        # NEW: social/identity tables
+        # -----------------------
+        "sects": VillageSectSerializer(
+            VillageSect.objects.filter(village=village), many=True
+        ).data,
+
+        "ethnicities": VillageEthnicitySerializer(
+            VillageEthnicity.objects.filter(village=village), many=True
+        ).data,
+
+        "tribes": VillageTribeSerializer(
+            VillageTribe.objects.filter(village=village), many=True
+        ).data,
+        
+        "AgriculturalStatus" : AgriculturalStatusSerializer(
+            AgriculturalStatus.objects.filter(village=village), many = True
+        ).data,
+    }
+
+     return Response(data)
+
 
     
 
@@ -273,9 +310,11 @@ class PersonViewSet(LocationScopedQuerysetMixin, viewsets.ModelViewSet):
         "sect",
         "ethnicity",
         "tribe",
-    ).all()
+     ).all()
+
     serializer_class = PersonSerializer
     permission_classes = [ IsAuthenticated, IsLocationStaff ]
+
     def get_queryset(self):
         qs = super().get_queryset()
         params = self.request.query_params
@@ -284,6 +323,10 @@ class PersonViewSet(LocationScopedQuerysetMixin, viewsets.ModelViewSet):
         sect_name = params.get("sect")
         ethnicity_name = params.get("ethnicity")
         tribe_name = params.get("tribe")
+        person_name = params.get("name")  
+
+        if person_name:
+            qs = qs.filter(name__icontains=person_name) 
 
         if village_name:
             qs = qs.filter(village__name__iexact=village_name)
@@ -306,7 +349,6 @@ class SectViewSet(viewsets.ModelViewSet):
     - area_manager
     - data_entry
     """
-
     queryset = Sect.objects.all().order_by("id")
     serializer_class = SectSerializer
     permission_classes = [IsAuthenticated,IsLocationStaff]
@@ -382,54 +424,6 @@ class VillageSectViewSet(viewsets.ModelViewSet):
 
         return qs.none()
 
-    
-class VillageSectKeyFigureViewSet(viewsets.ModelViewSet):
-    """
-    شخصيات رئيسية حسب (القرية، الطائفة):
-
-    - list        GET    /api/village-sect-key-figures/
-    - retrieve    GET    /api/village-sect-key-figures/{id}/
-    - create      POST   /api/village-sect-key-figures/
-    - update      PUT    /api/village-sect-key-figures/{id}/
-    - partial_update PATCH /api/village-sect-key-figures/{id}/
-    - destroy     DELETE /api/village-sect-key-figures/{id}/
-    """
-
-    queryset = VillageSectKeyFigure.objects.select_related(
-        "village_sect",
-        "village_sect__village",
-        "village_sect__village__subarea",
-        "village_sect__village__subarea__area",
-        "village_sect__village__subarea__area__governorate",
-        "village_sect__sect",
-        "person",
-        "created_by",
-    ).all()
-
-    serializer_class = VillageSectKeyFigureSerializer
-    permission_classes = [IsAuthenticated, IsLocationStaff]
-
-    def get_queryset(self):
-        """
-        - super_admin: يشوف كل الشخصيات
-        - area_manager / data_entry: فقط الشخصيات ضمن منطقته
-        """
-        user = self.request.user
-        qs = super().get_queryset()
-
-        if not user or not user.is_authenticated:
-            return qs.none()
-
-        if is_super_admin(user):
-            return qs
-
-        if is_area_manager(user) or is_data_entry(user):
-            return qs.filter(
-                village_sect__village__subarea__area=user.area,
-                village_sect__village__subarea__area__governorate=user.governorate,
-            )
-
-        return qs.none()
     
 class VillageEthnicityViewSet(viewsets.ModelViewSet) :
 
@@ -520,7 +514,7 @@ class IndustrialFacilityViewSet(viewsets.ModelViewSet):
         "village__subarea__area__governorate",
         "person",
         "created_by",
-    ).all().order_by("-year", "-id")
+    ).all().order_by("-id")
 
     serializer_class = IndustrialFacilitySerializer
     permission_classes = [IsAuthenticated, IsLocationStaff]
@@ -558,7 +552,7 @@ class LivestockViewSet(viewsets.ModelViewSet):
         "village__subarea__area",
         "village__subarea__area__governorate",
         "created_by",
-    ).all().order_by("-year", "village__name")
+    ).all().order_by("village__name")
 
     serializer_class = LivestockSerializer
     permission_classes = [IsAuthenticated, IsLocationStaff]
@@ -595,7 +589,7 @@ class GovernmentDepartmentViewSet(viewsets.ModelViewSet):
         "village__subarea",
         "village__subarea__area",
         "village__subarea__area__governorate",
-    ).all().order_by("-year", "department_name")
+    ).all().order_by("department_name")
 
     serializer_class = GovernmentDepartmentSerializer
     permission_classes = [IsAuthenticated, IsLocationStaff]
@@ -630,7 +624,7 @@ class NaturalAssetViewSet(viewsets.ModelViewSet):
         "village__subarea__area__governorate",
         "person_id_owner_name",
         "person_id_investor_name",
-    ).all().order_by("-year", "village__name", "name")
+    ).all().order_by("village__name", "name")
 
     serializer_class = NaturalAssetSerializer
     permission_classes = [IsAuthenticated, IsLocationStaff]
@@ -668,7 +662,7 @@ class IndustrialZoneViewSet(viewsets.ModelViewSet):
         "village__subarea__area",
         "village__subarea__area__governorate",
         "created_by",
-    ).all().order_by("-year", "village__name")
+    ).all().order_by("village__name")
 
     serializer_class = IndustrialZoneSerializer
     permission_classes = [IsAuthenticated, IsLocationStaff]
@@ -702,7 +696,7 @@ class ArchaeologicalSiteViewSet(viewsets.ModelViewSet):
         "village__subarea__area",
         "village__subarea__area__governorate",
         "created_by",
-    ).all().order_by("-year", "name")
+    ).all().order_by("name")
 
     serializer_class = ArchaeologicalSiteSerializer
     permission_classes = [IsAuthenticated, IsLocationStaff]
@@ -737,7 +731,7 @@ class TourismFacilityViewSet(viewsets.ModelViewSet):
         "village__subarea__area",
         "village__subarea__area__governorate",
         "created_by",
-    ).all().order_by("-year", "type")
+    ).all().order_by("type")
 
     serializer_class = TourismFacilitySerializer
     permission_classes = [IsAuthenticated, IsLocationStaff]
@@ -771,7 +765,7 @@ class CommercialActivityViewSet(viewsets.ModelViewSet):
         "village__subarea__area",
         "village__subarea__area__governorate",
         "created_by",
-    ).all().order_by("-year", "name")
+    ).all().order_by("name")
 
     serializer_class = CommercialActivitySerializer
     permission_classes = [IsAuthenticated, IsLocationStaff]
@@ -805,7 +799,7 @@ class DemographicDataViewSet(viewsets.ModelViewSet):
         "village__subarea__area",
         "village__subarea__area__governorate",
         "created_by",
-    ).all().order_by("-year", "village__name")
+    ).all().order_by("village__name")
 
     serializer_class = DemographicDataSerializer
     permission_classes = [IsAuthenticated, IsLocationStaff]
@@ -830,7 +824,9 @@ class DemographicDataViewSet(viewsets.ModelViewSet):
 
 class AgriculturalStatusViewSet(viewsets.ModelViewSet):
     """
-    إدارة الحالة الزراعية في القرى.
+    إدارة الحالة الزراعية للقرى:
+    - الأمن الأساسي: يشوف/يضيف/يعدّل/يحذف كل الحالات
+    - مدير المنطقة + مدخل البيانات: فقط القرى ضمن منطقته
     """
 
     queryset = AgriculturalStatus.objects.select_related(
@@ -838,8 +834,7 @@ class AgriculturalStatusViewSet(viewsets.ModelViewSet):
         "village__subarea",
         "village__subarea__area",
         "village__subarea__area__governorate",
-        "created_by",
-    ).all().order_by("-year", "village__name")
+    ).all().order_by("-id")
 
     serializer_class = AgriculturalStatusSerializer
     permission_classes = [IsAuthenticated, IsLocationStaff]
@@ -862,52 +857,27 @@ class AgriculturalStatusViewSet(viewsets.ModelViewSet):
 
         return qs.none()
 
+    def filter_queryset(self, queryset):
+        """
+        فلاتر بسيطة اختيارية من الـ query params:
+        - ?village=الغنطو
+        - ?season=winter
+        """
+        params = self.request.query_params
 
-class AgriculturalCropViewSet(viewsets.ModelViewSet):
-    """
-    إدارة محاصيل الحالة الزراعية.
-    """
+        village_name = params.get("village")
+        season = params.get("season")
 
-    queryset = AgriculturalCrop.objects.select_related(
-        "agricultural_status",
-        "agricultural_status__village",
-        "agricultural_status__village__subarea",
-        "agricultural_status__village__subarea__area",
-        "agricultural_status__village__subarea__area__governorate",
-        "created_by",
-    ).all().order_by("-agricultural_status__year", "crop_name")
+        if village_name:
+            queryset = queryset.filter(village__name__iexact=village_name)
 
-    serializer_class = AgriculturalCropSerializer
-    permission_classes = [IsAuthenticated, IsLocationStaff]
+        if season:
+            queryset = queryset.filter(season=season)
 
-    def get_queryset(self):
-        user = self.request.user
-        qs = super().get_queryset()
+        return queryset
 
-        if not user or not user.is_authenticated:
-            return qs.none()
+    def perform_create(self, serializer):
+        serializer.save(created_by=self.request.user)
 
-        if is_super_admin(user):
-            pass
-        elif is_area_manager(user) or is_data_entry(user):
-            qs = qs.filter(
-                agricultural_status__village__subarea__area=user.area,
-                agricultural_status__village__subarea__area__governorate=user.governorate,
-            )
-        else:
-            return qs.none()
-
-        # فلاتر اختيارية للفرونت
-        ag_status_id = self.request.query_params.get("agricultural_status")
-        if ag_status_id:
-            qs = qs.filter(agricultural_status_id=ag_status_id)
-
-        village_id = self.request.query_params.get("village")
-        if village_id:
-            qs = qs.filter(agricultural_status__village_id=village_id)
-
-        year = self.request.query_params.get("year")
-        if year:
-            qs = qs.filter(agricultural_status__year=year)
-
-        return qs
+    def perform_update(self, serializer):
+        serializer.save()

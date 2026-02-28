@@ -11,6 +11,7 @@ urlpatterns = [
     path("logout/", LogoutView.as_view(), name="logout"),
     path("me/", MeView.as_view(), name="me"),
     path("change-password/", ChangePasswordView.as_view(), name="change_password"),
-    path("profile/" , ProfileView.as_view() , name = "profile" ) ,
-    path('', include( router.urls ) ) ,
+    path("profile/" , ProfileView.as_view() , name = "profile" ),
+    path('', include( router.urls ) ),
 ]
+
